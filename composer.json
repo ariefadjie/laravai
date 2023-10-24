@@ -1,0 +1,42 @@
+{
+    "name": "ariefadjie/laravai",
+    "description": "Laravel OpenAI Integration",
+    "version": "1.0.0",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Ariefadjie\\Laravai\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Ariefadjie\\Laravai\\Tests\\": "tests/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Arief Adjie Wicaksono",
+            "email": "id.ariefadjie@gmail.com"
+        }
+    ],
+    "minimum-stability": "stable",
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Ariefadjie\\Laravai\\LaravaiServiceProvider"
+            ],
+            "aliases": {
+                "Lingkaran": "Ariefadjie\\Laravai\\Facades\\Lingkaran"
+            }
+        }
+    },
+    "require-dev": {
+        "orchestra/testbench": "^8.13"
+    },
+    "require": {
+        "openai-php/laravel": "^0.7.0",
+        "botman/botman": "^2.8",
+        "botman/driver-telegram": "^2.0"
+    }
+}
