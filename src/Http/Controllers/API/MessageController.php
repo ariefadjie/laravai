@@ -11,6 +11,7 @@ use OpenAI\Laravel\Facades\OpenAI;
 use Ariefadjie\Laravai\Services\Scraper;
 use Ariefadjie\Laravai\Services\Tokenizer;
 use Ariefadjie\Laravai\Services\Ai;
+use Illuminate\Support\Facades\DB;
 
 class MessageController extends Controller
 {
@@ -74,5 +75,31 @@ class MessageController extends Controller
         ]);
 
         return $result['choices'][0]['message']['content'];
+    }
+
+    public function handleChat(Request $request, string $embed)
+    {
+        $question = $request->input('message');
+        $questionVector = json_encode($this->ai->getVector($question));
+
+        $chunks = DB::table('embedding_chunks')
+        ->select("text")
+        ->selectSub("vector <=> '{$questionVector}'::vector", "distance")
+        ->where('embedding_guid', $embed)
+        ->orderBy('distance', 'asc')
+        ->limit(1)
+        ->get();
+        $context = $chunks->map(function ($chunk) {
+            return $chunk->text;
+        })->implode(' ');
+
+        $answer = $this->ai->askQuestionByContext($context, $question);
+
+        return [
+            'context' => $context,
+            'question' => $question,
+            'answer' => $answer,
+            'html' => view('laravai::message', compact('question', 'answer'))->render(),
+        ];
     }
 }

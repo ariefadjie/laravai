@@ -6,15 +6,19 @@ use Illuminate\Support\Facades\Http;
 
 class Scraper
 {
-    public function get(string $url): string
+    public function get(string $url): array
     {
         $html = Http::get($url)->body();
 
         preg_match('/<body>(.*?)<\/body>/s', $html, $match);
+        preg_match('/<title>(.*?)<\/title>/s', $html, $title);
 
         $content = $this->cleanHtml($match[1]);
 
-        return $content;
+        return [
+            'title' => $title[1],
+            'body' => $content,
+        ];
     }
 
     public function cleanHtml(string $content): string

@@ -6,7 +6,7 @@ use OpenAI\Laravel\Facades\OpenAI;
 
 class Ai
 {
-    public function askQuestionByContext(string $context, string $question)
+    public function askQuestionByContext(string $context, string $question): string
     {
         $system_template = "
         Use the following pieces of context to answer the users question. 
@@ -16,7 +16,7 @@ class Ai
         ";
         $system_prompt = str_replace("{context}", $context, $system_template);
 
-        $openAi = OpenAI::chat()->create([
+        $response = OpenAI::chat()->create([
             'model' => 'gpt-3.5-turbo',
             // 'temperature' => 0.8,
             'messages' => [
@@ -25,6 +25,16 @@ class Ai
             ],
         ]);
 
-        return response()->json($openAi);
+        return $response['choices'][0]['message']['content'];
+    }
+
+    public function getVector(string $text): array
+    {
+        $response = OpenAI::embeddings()->create([
+            'model' => 'text-embedding-ada-002',
+            'input' => $text,
+        ]);
+
+        return $response['data'][0]['embedding'];
     }
 }

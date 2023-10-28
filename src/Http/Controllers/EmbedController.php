@@ -7,6 +7,7 @@ use Illuminate\Routing\Controller;
 use Ariefadjie\Laravai\Services\Scraper;
 use Ariefadjie\Laravai\Services\Tokenizer;
 use Ariefadjie\Laravai\Services\Ai;
+use Ariefadjie\Laravai\Models\Embedding;
 
 class EmbedController extends Controller
 {
@@ -28,10 +29,28 @@ class EmbedController extends Controller
 
     public function store(Request $request)
     {
-        $content = $this->scraper->get($request->input('url'));
+        $scraper = $this->scraper->get($request->input('url'));
 
-        $wordChunks = $this->tokenizer->wordChunks($content);
+        $wordChunks = $this->tokenizer->wordChunks($scraper['body']);
 
-        return $wordChunks;
+        $embedding = Embedding::create([
+            'title' => $scraper['title'],
+            'url' => $request->input('url'),
+        ]);
+
+        foreach($wordChunks as $text) {
+            try {
+                $vector = $this->ai->getVector($text);
+
+                $embedding->chunks()->create([
+                   'text' => $text,
+                   'vector' =>  json_encode($vector),
+                ]);
+            } catch (\Throwable $th) {
+                \Log::warning($th->getMessage());
+            }
+        }
+
+        return redirect()->route('ariefadjie.laravai.chat.show', ['embed' => $embedding->getKey()]);
     }
 }
