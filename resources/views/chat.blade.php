@@ -48,13 +48,28 @@
       },
       method: formChat.getAttribute('method'),
       body: JSON.stringify({ message }),
-    }).then(res => {
-      return res.json();
-    }).then(data  => {
+    }).then(async res => {
+      var reader = res.body.getReader();
+      var decoder = new TextDecoder();
+      let text = '';
       var chatAnswer = document.getElementById('chat-answer-'+messageKey);
-      chatAnswer.innerHTML = data.answer;
+
+      while (true) {
+        var {value, done} = await reader.read();
+        if (done) break;
+        text += decoder.decode(value, {stream: true});
+        chatAnswer.innerHTML = text;
+      }
+
       messageKey++;
-    });
+
+      // return res.json();
+    })
+    // .then(data  => {
+    //   var chatAnswer = document.getElementById('chat-answer-'+messageKey);
+    //   chatAnswer.innerHTML = data.answer;
+    //   messageKey++;
+    // });
   });
 </script>
 @endsection

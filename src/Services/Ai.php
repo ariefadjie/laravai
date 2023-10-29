@@ -3,6 +3,7 @@
 namespace Ariefadjie\Laravai\Services;
 
 use OpenAI\Laravel\Facades\OpenAI;
+use OpenAI\Responses\StreamResponse;
 
 class Ai
 {
@@ -17,6 +18,19 @@ class Ai
         ]);
 
         return $response['choices'][0]['message']['content'];
+    }
+
+    public function askQuestionStream(string $question, $maxToken = 256): StreamResponse
+    {
+        $responses = OpenAI::chat()->createStreamed([
+            'model' => 'gpt-3.5-turbo',
+            'messages' => [
+                ['role' => 'user', 'content' => $question]
+            ],
+            'max_tokens' => $maxToken,
+        ]);
+
+        return $responses;
     }
 
     public function askQuestionByContext(string $context, string $question): string

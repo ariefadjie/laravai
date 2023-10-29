@@ -13,6 +13,7 @@ use Ariefadjie\Laravai\Services\Tokenizer;
 use Ariefadjie\Laravai\Services\Ai;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\JsonResponse;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class MessageController extends Controller
 {
@@ -75,6 +76,19 @@ class MessageController extends Controller
             'question' => $question,
             'answer' => $answer,
         ]);
+    }
+
+    public function handleChatStream(Request $request, string $embed): StreamedResponse
+    {
+        $question = $request->input('message');
+
+        return response()->stream(function () use ($question) {
+            $responses = $this->ai->askQuestionStream($question);
+
+            foreach ($responses as $response) {
+                echo $response['choices'][0]['delta']['content'] ?? '';
+            }
+        });
     }
 
     public function handleChatByContext(Request $request, string $embed): JsonResponse
