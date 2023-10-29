@@ -12,6 +12,7 @@ use Ariefadjie\Laravai\Services\Scraper;
 use Ariefadjie\Laravai\Services\Tokenizer;
 use Ariefadjie\Laravai\Services\Ai;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Http\JsonResponse;
 
 class MessageController extends Controller
 {
@@ -26,7 +27,7 @@ class MessageController extends Controller
         $this->ai = $ai;
     }
 
-    public function debug(): array
+    public function debug(): JsonResponse
     {
         $url = 'https://www.detik.com/sumut/berita/d-6998827/daftar-pasangan-bakal-capres-dan-cawapres-pilpres-2024-siapa-saja';
 
@@ -39,12 +40,12 @@ class MessageController extends Controller
         $question = 'Siapa wakil prabowo di 2024?';
 
         $response = $this->ai->askQuestionByContext($context, $question);
-        return [
+        return response()->json([
             'url' => $url,
             'context' => $context,
             'question' => $question,
             'response' => $response,
-        ];
+        ]);
     }
 
     public function handleTelegram(Request $request)
@@ -57,27 +58,26 @@ class MessageController extends Controller
 
         // Give the bot something to listen for.
         $botman->hears('{message}', function (BotMan $bot, $message) {
-            $bot->reply($this->openAiReply($message));
+            $bot->reply($this->ai->askQuestion($message));
         });
 
         // Start listening
         $botman->listen();
     }
 
-    public function openAiReply($message)
+    public function handleChat(Request $request, string $embed): JsonResponse
     {
-        $result = OpenAI::chat()->create([
-            'model' => 'gpt-3.5-turbo',
-            'messages' => [
-                ['role' => 'user', 'content' => $message]
-            ],
-            'max_tokens' => 256,
-        ]);
+        $question = $request->input('message');
 
-        return $result['choices'][0]['message']['content'];
+        $answer = $this->ai->askQuestion($question);
+
+        return response()->json([
+            'question' => $question,
+            'answer' => $answer,
+        ]);
     }
 
-    public function handleChat(Request $request, string $embed)
+    public function handleChatByContext(Request $request, string $embed): JsonResponse
     {
         $question = $request->input('message');
         $questionVector = json_encode($this->ai->getVector($question));
@@ -95,11 +95,10 @@ class MessageController extends Controller
 
         $answer = $this->ai->askQuestionByContext($context, $question);
 
-        return [
+        return response()->json([
             'context' => $context,
             'question' => $question,
             'answer' => $answer,
-            'html' => view('laravai::message', compact('question', 'answer'))->render(),
-        ];
+        ]);
     }
 }

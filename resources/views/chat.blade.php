@@ -12,22 +12,48 @@
 <script>
   var formChat = document.getElementById('form-chat');
   var chatMessages = document.getElementById('chat-messages');
+  var messageKey = 0;
+
   formChat.addEventListener('submit', e => {
     e.preventDefault();
 
+    var message = e.target.message.value;
+    var messageTemplates = `
+    <li class="d-flex mb-3 flex-row-reverse">
+        <div class="card w-75 message-green">
+            <div class="card-body p-2">
+                <p class="mb-0">
+                    ${message}
+                </p>
+            </div>
+        </div>
+    </li>
+    <li class="d-flex mb-3 flex-row">
+        <div class="card w-75">
+            <div class="card-body p-2" id="chat-answer-${messageKey}">
+                <div class="spinner-border spinner-border-sm" role="status">
+                  <span class="visually-hidden">Thinking...</span>
+                </div>
+            </div>
+        </div>
+    </li>
+    `;
+
+    e.target.message.value = '';
+    chatMessages.innerHTML += messageTemplates;
+
     fetch(formChat.getAttribute('action'), {
       headers: {
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
       },
       method: formChat.getAttribute('method'),
-      body: JSON.stringify({
-        message: e.target.message.value
-      }),
+      body: JSON.stringify({ message }),
     }).then(res => {
       return res.json();
     }).then(data  => {
-      e.target.message.value = '';
-      chatMessages.innerHTML += data.html;
+      var chatAnswer = document.getElementById('chat-answer-'+messageKey);
+      chatAnswer.innerHTML = data.answer;
+      messageKey++;
     });
   });
 </script>
@@ -53,7 +79,7 @@
                 placeholder="Message"></textarea>
             </div>
           </div>
-          <button type="sumit" class="btn btn-primary btn-rounded float-end">Send</button>
+          <button type="submit" class="btn btn-primary btn-rounded float-end">Send</button>
         </form>
       </div>
     </div>

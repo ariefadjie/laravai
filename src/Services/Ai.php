@@ -6,6 +6,19 @@ use OpenAI\Laravel\Facades\OpenAI;
 
 class Ai
 {
+    public function askQuestion(string $question, $maxToken = 256): string
+    {
+        $response = OpenAI::chat()->create([
+            'model' => 'gpt-3.5-turbo',
+            'messages' => [
+                ['role' => 'user', 'content' => $question]
+            ],
+            'max_tokens' => $maxToken,
+        ]);
+
+        return $response['choices'][0]['message']['content'];
+    }
+
     public function askQuestionByContext(string $context, string $question): string
     {
         $system_template = "
