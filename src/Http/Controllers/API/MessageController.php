@@ -34,7 +34,7 @@ class MessageController extends Controller
 
         $content = $this->scraper->get($url);
 
-        $wordChunks = $this->tokenizer->wordChunks($content);
+        $wordChunks = $this->tokenizer->wordChunks($content['body']);
 
         $context = $wordChunks[0];
 
