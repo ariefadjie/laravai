@@ -8,9 +8,47 @@ use BotMan\BotMan\BotMan;
 use BotMan\BotMan\BotManFactory;
 use BotMan\BotMan\Drivers\DriverManager;
 use OpenAI\Laravel\Facades\OpenAI;
+use Ariefadjie\Laravai\Services\Scraper;
+use Ariefadjie\Laravai\Services\Tokenizer;
+use Ariefadjie\Laravai\Services\Ai;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Http\JsonResponse;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class MessageController extends Controller
 {
+    protected Scraper $scraper;
+    protected Tokenizer $tokenizer;
+    protected Ai $ai;
+
+    public function __construct(Scraper $scraper, Tokenizer $tokenizer, Ai $ai)
+    {
+        $this->scraper = $scraper;
+        $this->tokenizer = $tokenizer;
+        $this->ai = $ai;
+    }
+
+    public function debug(): JsonResponse
+    {
+        $url = 'https://www.detik.com/sumut/berita/d-6998827/daftar-pasangan-bakal-capres-dan-cawapres-pilpres-2024-siapa-saja';
+
+        $content = $this->scraper->get($url);
+
+        $wordChunks = $this->tokenizer->wordChunks($content['body']);
+
+        $context = $wordChunks[0];
+
+        $question = 'Siapa wakil prabowo di 2024?';
+
+        $response = $this->ai->askQuestionByContext($context, $question);
+        return response()->json([
+            'url' => $url,
+            'context' => $context,
+            'question' => $question,
+            'response' => $response,
+        ]);
+    }
+
     public function handleTelegram(Request $request)
     {
         // Load the driver(s) you want to use
@@ -21,23 +59,60 @@ class MessageController extends Controller
 
         // Give the bot something to listen for.
         $botman->hears('{message}', function (BotMan $bot, $message) {
-            $bot->reply($this->openAiReply($message));
+            $bot->reply($this->ai->askQuestion($message));
         });
 
         // Start listening
         $botman->listen();
     }
 
-    public function openAiReply($message)
+    public function handleChat(Request $request, string $embed): JsonResponse
     {
-        $result = OpenAI::chat()->create([
-            'model' => 'gpt-3.5-turbo',
-            'messages' => [
-                ['role' => 'user', 'content' => $message]
-            ],
-            'max_tokens' => 256,
-        ]);
+        $question = $request->input('message');
 
-        return $result['choices'][0]['message']['content'];
+        $answer = $this->ai->askQuestion($question);
+
+        return response()->json([
+            'question' => $question,
+            'answer' => $answer,
+        ]);
+    }
+
+    public function handleChatStream(Request $request, string $embed): StreamedResponse
+    {
+        $question = $request->input('message');
+
+        return response()->stream(function () use ($question) {
+            $responses = $this->ai->askQuestionStream($question);
+
+            foreach ($responses as $response) {
+                echo $response['choices'][0]['delta']['content'] ?? '';
+            }
+        });
+    }
+
+    public function handleChatByContext(Request $request, string $embed): JsonResponse
+    {
+        $question = $request->input('message');
+        $questionVector = json_encode($this->ai->getVector($question));
+
+        $chunks = DB::table('embedding_chunks')
+        ->select("text")
+        ->selectSub("vector <=> '{$questionVector}'::vector", "distance")
+        ->where('embedding_guid', $embed)
+        ->orderBy('distance', 'asc')
+        ->limit(1)
+        ->get();
+        $context = $chunks->map(function ($chunk) {
+            return $chunk->text;
+        })->implode(' ');
+
+        $answer = $this->ai->askQuestionByContext($context, $question);
+
+        return response()->json([
+            'context' => $context,
+            'question' => $question,
+            'answer' => $answer,
+        ]);
     }
 }
